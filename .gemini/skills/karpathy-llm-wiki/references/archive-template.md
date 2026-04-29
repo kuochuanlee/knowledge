@@ -1,5 +1,6 @@
 ---
 title: "{提問或封存主題名稱}"
+aliases: [{選填：封存主題的別名或縮寫}]
 date_archived: "{YYYY-MM-DD}"
 tags: 
   - archive

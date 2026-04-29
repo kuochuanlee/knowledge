@@ -7,6 +7,7 @@ tags:
 raw_sources:
   - "[[{filename1}]]"
   - "[[{filename2}]]"
+date_created: "{YYYY-MM-DD}"
 date_updated: "{YYYY-MM-DD}"
 status: "active"
 ---
