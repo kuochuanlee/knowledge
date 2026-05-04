@@ -18,6 +18,7 @@ Karpathy 的核心理念：
 | 合法指令 | 對應流程 |
 |---------|---------|
 | Ingest / 攝取 | → 走 Ingest 流程 |
+| Preserve / 保留收錄 | → 走 Preserve 流程 |
 | Query / 查詢 | → 走 Query 流程 |
 | Lint / 健康檢查 | → 走 Lint 流程 |
 | Reindex / 重新編排索引 | → 走 Reindex 流程 |
@@ -147,6 +148,47 @@ Karpathy 的核心理念：
    - 如果沒有發生連鎖更新，請省略 Cascaded 相關紀錄。
    - 確切格式請嚴格遵照 `references/log-template.md`。
    - **寫入驗證**：每次寫入 `log.md` 後，必須立即回讀檔案末尾確認內容已正確附加。若發現寫入為空或內容不符，必須重試並回報使用者，不可靜默失敗。
+
+---
+
+## Preserve (保留收錄)
+
+將原始資料以接近原貌的方式收錄進 wiki，僅做輕度潤稿與格式統一，不進行概念拆解或大幅改寫。適用於已經具備高品質結構的文件（如技術 Spec、別人整理好的重點筆記、完整的分析報告等）。觸發條件：使用者明確下達「Preserve」或「保留收錄」指令。
+
+### 與 Ingest 的差異
+
+| | Ingest | Preserve |
+|---|---|---|
+| 核心動作 | 拆解原文，按概念重組為多篇文章 | 整篇保留，產出一篇對應的 wiki 文章 |
+| 內容改寫幅度 | 大（萃取、重組、翻譯） | 小（語句精簡、格式統一） |
+| 文件結構 | 以概念邊界切割 | 保留原始結構 |
+| 連鎖更新 | 有（Cascade Updates） | 無 |
+
+### 步驟
+
+1. **Fetch（共用 Ingest 的 Fetch 流程）**：讀取 `wiki/raw/` 中的指定檔案，注入 YAML Frontmatter。所有 Fetch 規則（保留原始檔名、PDF 伴生代理模式等）完全適用。
+
+2. **檔名決定**：根據文件內容的核心主題，產出一個具備描述性的中文概念名稱作為 wiki 文章檔名（如 `OAuth2_授權流程規格.md`）。命名規則與 Ingest 建立全新概念時一致，必須遵守檔名合法字元規範。
+
+3. **輕度潤稿與格式統一**：
+   - **允許**：修正錯字、使語句更簡潔清楚、統一標題層級與 Markdown 格式、調整排版使其符合 wiki 的寫作風格規範。
+   - **允許**：精簡明顯冗餘的重複段落（如同一論點在不同段落反覆出現）。
+   - **禁止**：改寫論點、刪除段落、重新組織章節順序、濃縮內容。
+   - **判斷標準**：若你不確定某處修改是否超出「潤稿」範圍，保留原文。
+
+4. **雙向連結注入**：掃描內文，對已存在於 wiki 的概念加上 `[[雙向連結]]`。不為此建立新文章，僅連結已存在的。
+
+5. **YAML Frontmatter**：寫入完整的 Frontmatter，格式遵守 `references/article-template.md`，但 `status` 設為 `"preserved"`。`raw_sources` 填入對應的原始檔案連結。
+
+6. **Post-Preserve**：
+   - 將新文章的雙向連結與一句話摘要新增至 `wiki/index.md`，在 Summary 欄位前標記 `[Preserved]`。
+   - 以 Append 模式將操作記錄寫入 `wiki/log.md`，格式遵守 `references/log-template.md`。
+
+### [GUARD] Preserve 限制
+
+- Preserve 不觸發 Cascade Updates（連鎖更新）。保留收錄的文章是獨立快照，不主動去修改其他既有文章。
+- 若使用者對同一份 raw 既執行過 Ingest 又執行 Preserve，兩者產出的 wiki 文章獨立共存，不互相覆蓋。
+- 一份 raw 對應一篇 Preserve 文章，不可拆分為多篇。
 
 ---
 
@@ -310,9 +352,11 @@ Karpathy 的核心理念：
   - `status: "ingested"` (raw 區)：具備絕對防寫保護，僅供讀取與萃取。
   - `status: "active"` (wiki 區)：核心知識文章，參與 Cascade Updates 連鎖更新。
   - `status: "archived"` (wiki 區)：特定時間點的封存快照，免疫連鎖更新。
+  - `status: "preserved"` (wiki 區)：保留收錄的文章，僅做輕度潤稿，免疫連鎖更新。
   - `status: "stub"` (wiki 區)：由 Lint 建立的待補完空節點，等待未來知識注入。
 - **檔案讀寫權限界線 (I/O Boundaries)**：
   - **Ingest**：必寫入實體文章與更新 `wiki/log.md`。嚴守目錄降載原則，僅在「建立新文章或新主題」時才更新 `wiki/index.md`。
+  - **Preserve**：寫入一篇保留收錄的實體文章、更新 `wiki/index.md`（標記 `[Preserved]`）與 `wiki/log.md`。不觸發 Cascade Updates，不修改任何既有文章。
   - **Query**：單純查詢時，預設僅在對話框輸出答案，絕對不寫入任何實體檔案。只有明確觸發 Archive (封存) 時，才會建立實體快照檔案，並同步更新 `index.md` 與 `log.md`。
   - **Lint**：必寫入 `wiki/log.md` 紀錄檢查結果。僅在執行決定性檢查時，才允許修改 `wiki/index.md` 與建立 stub 檔案。
   - **Reindex**：僅寫入 `wiki/index.md`（結構調整）與 `wiki/log.md`。不寫入任何知識文章實體檔案。
