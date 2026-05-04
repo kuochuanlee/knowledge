@@ -154,3 +154,34 @@ wiki/raw/<書名>_N_0.md  -- 二次切割的子段（若有超大章節）
 1. **知識庫視覺化 (IDE)**：強烈建議使用 **Obsidian** 開啟此專案目錄，以完美視覺化知識圖譜並順暢閱讀 Markdown 檔案。
 2. **AI 工具 (AI Tooling)**：需要配置具備讀取本地 `.gemini/skills/` 能力的 AI Agent 工具（例如：搭配 Google AI Pro 的 Gemini CLI 或是 Antigravity）。
 3. **版本控制 (Version Control)**：強烈建議使用 `git` 定期提交變更，以作為防護網，防止 AI 產生不可逆的幻覺擴散 (Hallucination Cascades)。
+
+---
+
+## 實用腳本 (Utility Scripts)
+
+本專案在 `scripts/` 目錄下提供了一些輔助腳本，方便日常知識管理操作：
+
+### 1. 網頁轉 Markdown (`web_to_md.py`)
+
+**用途**：將指定的網頁主體內容抓取並轉換為 Markdown 格式，預設儲存至 `wiki/raw/` 目錄中，方便後續由 AI (karpathy-llm-wiki) 進行知識萃取與攝取。
+
+**使用方式**：
+在專案根目錄下，使用虛擬環境的 Python 執行：
+```powershell
+# 自動依網址或網域產生 Markdown 檔名
+.venv\Scripts\python.exe scripts\web_to_md.py "https://example.com/article"
+
+# 指定輸出的檔案名稱 (例如：存成 wiki/raw/my_article.md)
+.venv\Scripts\python.exe scripts\web_to_md.py "https://example.com/article" -o "my_article"
+```
+
+### 2. 備份知識庫 (`backup_wiki.ps1`)
+
+**用途**：使用 Windows 內建的高效 `robocopy` 工具，將本地端的 `wiki/` 目錄完整鏡像備份到 Google Drive 雲端硬碟 (`H:\我的雲端硬碟\DriveSyncFiles\wiki_book`)。同步過程會自動排除 `.git` 目錄並刪除雲端多餘的檔案，確保兩邊完全一致。
+
+**使用方式**：
+在 PowerShell 中執行以下指令：
+```powershell
+.\scripts\backup_wiki.ps1
+```
+*(注意：執行前請確認 Google Drive 電腦版已掛載，且 `H:` 磁碟機與備份路徑存在)*
